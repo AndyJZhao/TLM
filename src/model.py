@@ -10,8 +10,8 @@ from transformers.utils.dummy_pt_objects import NoRepeatNGramLogitsProcessor
 
 logger = logging.getLogger(__name__)
 
-class BertForMaskedLM(BertPreTrainedModel):
 
+class BertForMaskedLM(BertPreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"predictions.decoder.bias"]
 
@@ -41,32 +41,33 @@ class BertForMaskedLM(BertPreTrainedModel):
 
     def set_output_embeddings(self, new_embeddings):
         self.cls.predictions.decoder = new_embeddings
-    
+
     def set_cls_layer(self, num_labels, config):
         self.cls_layer = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
             nn.GELU(),
             nn.Linear(config.hidden_size, num_labels),
         )
+
     def set_args(self, args):
         self.args = args
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        return_loss=True,
-        cls_labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
+            return_loss=True,
+            cls_labels=None,
     ):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         loss_fct = CrossEntropyLoss()  # -100 index = padding token
@@ -84,7 +85,7 @@ class BertForMaskedLM(BertPreTrainedModel):
             return_dict=return_dict,
         )
         sequence_output = outputs[0]
-        cls_prediction_scores = self.cls_layer(sequence_output[:,0])
+        cls_prediction_scores = self.cls_layer(sequence_output[:, 0])
 
         # compute cls loss
         cls_loss = None
@@ -104,14 +105,14 @@ class BertForMaskedLM(BertPreTrainedModel):
             mlm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
         else:
             mlm_loss = self.cls(sequence_output).sum() * 0.0
-        
+
         if self.args.mlm_weight == 0 and cls_labels is None:
             mlm_weight = 1
         else:
             mlm_weight = self.args.mlm_weight
 
         loss = (mlm_loss * mlm_weight + cls_loss * cls_weight) / (mlm_weight + cls_weight)
-        
+
         return MaskedLMOutput(
             loss=loss,
             logits=cls_prediction_scores,

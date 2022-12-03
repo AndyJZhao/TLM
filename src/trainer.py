@@ -7,6 +7,7 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
+
 class Trainer:
 
     def __init__(self,
@@ -24,8 +25,8 @@ class Trainer:
                  tokenizer,
                  from_checkpoint=None,
                  test_dataloader=None,
-                ):
-        
+                 ):
+
         self.args = args
         self.model = model
         self.optimizer = optimizer
@@ -54,19 +55,19 @@ class Trainer:
         else:
             self._external_iter = None
         self.from_checkpoint = from_checkpoint
-    
+
     def _move_to_device(self, batch):
         for k in batch:
             batch[k] = batch[k].to(self.args.device)
         return batch
-    
+
     def _save_model(self, save_path=None):
         if save_path is None:
             save_path = self.args.output_dir
-        
+
         if self.accelerator.is_main_process:
-           unwrapped_model = self.accelerator.unwrap_model(self.model)
-           unwrapped_model.save_pretrained(save_path, save_function=self.accelerator.save)
+            unwrapped_model = self.accelerator.unwrap_model(self.model)
+            unwrapped_model.save_pretrained(save_path, save_function=self.accelerator.save)
 
     def _save_trained(self):
         self._save_model()
@@ -128,10 +129,11 @@ class Trainer:
                         self.writter.add_scalar(f"eval/test-{key}", eval_metric[key], self.completed_steps)
                     self.test_results = eval_metric[key]
         if is_best and self.args.output_dir is not None:
-            self.logger.info("best metric on dev set achieved, try to save model checkpoint to {}".format(self.args.output_dir))
+            self.logger.info(
+                "best metric on dev set achieved, try to save model checkpoint to {}".format(self.args.output_dir))
             self._save_trained()
         self.model.train()
-    
+
     def _get_next_batch(self):
         try:
             batch = next(self._train_iter)
@@ -139,7 +141,7 @@ class Trainer:
             self._train_iter = iter(self.train_dataloader)
             batch = next(self._train_iter)
         return batch
-    
+
     def _get_next_external_batch(self):
         try:
             batch = next(self._external_iter)
@@ -147,14 +149,14 @@ class Trainer:
             self._external_iter = iter(self.external_dataloader)
             batch = next(self._external_iter)
         return batch
-    
+
     def _get_batch(self, ratio):
         if ratio <= 1 or (self.completed_steps + 1) % ratio == 0:
             batch = self._get_next_batch()
         else:
             batch = self._get_next_external_batch()
         return self._move_to_device(batch)
-    
+
     def compute_loss(self, ratio):
         self.model.train()
         batch = self._get_batch(ratio)
@@ -165,10 +167,10 @@ class Trainer:
         return loss.item()
 
     def _prepare_from_checkpoint(self):
-        
+
         if self.from_checkpoint is None:
             return
-        
+
         state_file = os.path.join(self.from_checkpoint, "trainer_state.json")
         optim_file = os.path.join(self.from_checkpoint, "optimizer.pt")
         sched_file = os.path.join(self.from_checkpoint, "scheduler.pt")
@@ -182,10 +184,10 @@ class Trainer:
             state = json.load(f)
             self.pre_completed_steps = state["completed_steps"]
             self.best_metric = state["best_metric"]
-        
+
         self.logger.info(f"pretrained steps: {self.pre_completed_steps}, best dev metric {self.best_metric}")
         self.accelerator.wait_for_everyone()
-    
+
     def update(self, tr_loss, loss_step):
         if self.completed_steps % self.args.steps_to_log == 0:
             self.logger.info(
@@ -201,15 +203,15 @@ class Trainer:
                     self.writter.add_scalar('train/lr', self.optimizer.param_groups[0]["lr"], self.completed_steps)
             tr_loss = 0.0
             loss_step = 0
-        
+
         if self.completed_steps % self.args.steps_to_eval == 0:
             self.evaluate()
-        
+
         if self.completed_steps % self.args.steps_to_save == 0:
             self.accelerator.wait_for_everyone()
             if self.accelerator.is_main_process:
                 self._save_model(
-                    save_path = os.path.join(self.args.output_dir, 'checkpoint-{}'.format(self.completed_steps))
+                    save_path=os.path.join(self.args.output_dir, 'checkpoint-{}'.format(self.completed_steps))
                 )
                 # delete outdated checkpoints
                 for files in os.listdir(self.args.output_dir):
@@ -229,7 +231,8 @@ class Trainer:
         self.logger.info(f"  Instantaneous batch size per device = {self.args.per_device_train_batch_size}")
         self.logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
         self.logger.info(f"  Gradient Accumulation steps = {self.args.gradient_accumulation_steps}")
-        self.logger.info(f"  Total optimization steps = {self.args.max_train_steps // self.args.gradient_accumulation_steps}")
+        self.logger.info(
+            f"  Total optimization steps = {self.args.max_train_steps // self.args.gradient_accumulation_steps}")
         # Only show the progress bar once on each machine.
         progress_bar = tqdm(range(self.args.max_train_steps // self.args.gradient_accumulation_steps))
         self.completed_steps = 0
@@ -254,9 +257,9 @@ class Trainer:
                 self.update(tr_loss, loss_step)
                 tr_loss = 0.0
                 loss_step = 0
-        
+
         self.evaluate()
         if self.args.save_final and self.args.output_dir is not None:
             self._save_model(
-                save_path = os.path.join(self.args.output_dir, 'final')
+                save_path=os.path.join(self.args.output_dir, 'final')
             )

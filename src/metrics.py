@@ -19,7 +19,6 @@ from sklearn.metrics import f1_score, matthews_corrcoef
 
 import datasets
 
-
 _CITATION = """\
 @inproceedings{wang2019glue,
   title={{GLUE}: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding},
@@ -92,6 +91,7 @@ def acc_and_f1(preds, labels):
         "f1": f1,
     }
 
+
 def micro_macro_f1(preds, labels):
     micro_f1 = f1_score(y_true=labels, y_pred=preds, average="micro")
     macro_f1 = f1_score(y_true=labels, y_pred=preds, average="macro")
@@ -100,17 +100,20 @@ def micro_macro_f1(preds, labels):
         "macro_f1": macro_f1,
     }
 
+
 def micro_f1(preds, labels):
     micro_f1 = f1_score(y_true=labels, y_pred=preds, average="micro")
     return {
         "micro_f1": micro_f1,
     }
 
+
 def macro_f1(preds, labels):
     macro_f1 = f1_score(y_true=labels, y_pred=preds, average="macro")
     return {
         "macro_f1": macro_f1,
     }
+
 
 def pearson_and_spearman(preds, labels):
     pearson_corr = pearsonr(preds, labels)[0]

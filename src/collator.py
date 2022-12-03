@@ -7,9 +7,9 @@ import torch
 
 from transformers.tokenization_utils_base import BatchEncoding, PreTrainedTokenizerBase
 
+
 @dataclass
 class DataCollatorForLanguageModeling:
-
     tokenizer: PreTrainedTokenizerBase
     mlm: bool = True
     mlm_probability: float = 0.15
@@ -23,7 +23,7 @@ class DataCollatorForLanguageModeling:
             )
 
     def __call__(
-        self, examples: List[Union[List[int], torch.Tensor, Dict[str, torch.Tensor]]]
+            self, examples: List[Union[List[int], torch.Tensor, Dict[str, torch.Tensor]]]
     ) -> Dict[str, torch.Tensor]:
         # Handle dict or lists with proper padding and conversion to tensor.
         batch = self.tokenizer.pad(examples, return_tensors="pt", pad_to_multiple_of=self.pad_to_multiple_of)
@@ -44,8 +44,8 @@ class DataCollatorForLanguageModeling:
         return batch
 
     def mask_tokens(
-        self, inputs: torch.Tensor, special_tokens_mask: Optional[torch.Tensor] = None,
-        init_labels: Optional[torch.Tensor] = None,
+            self, inputs: torch.Tensor, special_tokens_mask: Optional[torch.Tensor] = None,
+            init_labels: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.

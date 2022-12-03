@@ -33,10 +33,11 @@ es_config = {
 
 from multiprocessing import Pool
 
-glob_data_source=None
-glob_top_k=None
-glob_logger=None
-glob_text_column_name=None
+glob_data_source = None
+glob_top_k = None
+glob_logger = None
+glob_text_column_name = None
+
 
 def get_neighbour_examples(query):
     try:
@@ -48,8 +49,9 @@ def get_neighbour_examples(query):
     except:
         if glob_logger is not None:
             glob_logger.info("error detected when search for query {}, skipped this query".format(query))
-        hard_example = {"id":[]}
+        hard_example = {"id": []}
     return hard_example
+
 
 class BM25Selector:
 
@@ -80,7 +82,7 @@ class BM25Selector:
                 es_index_name=self.index_name
             )
             glob_data_source = self.source
-    
+
     def build_queries(self):
         queries = []
         if self.enable_rake:
@@ -105,20 +107,20 @@ class BM25Selector:
             if i + batch_size >= len(queries):
                 batched_queries = queries[i:]
             else:
-                batched_queries = queries[i:i+batch_size]
+                batched_queries = queries[i:i + batch_size]
             with Pool(processes=self.num_proc) as pool:
                 results = pool.map(get_neighbour_examples, batched_queries)
                 for result in results:
                     query_neighbours.extend(result["id"])
                     query_ranks.extend(list(range(len(result["id"]))))
-        
+
         unique_query = {}
         for nid, rank in zip(query_neighbours, query_ranks):
             if nid not in unique_query:
                 unique_query[nid] = rank
             else:
                 unique_query[nid] = min(unique_query[nid], rank)
-        
+
         query_neighbours = []
         ranks = []
         for nid, rank in unique_query.items():
@@ -126,20 +128,21 @@ class BM25Selector:
             ranks.append(rank)
         texts = [self.source[idx][self.text_column_name] for idx in query_neighbours]
         ids = list(range(len(texts)))
-        df = pd.DataFrame({"text":texts, "id":ids, "rank":ranks})
+        df = pd.DataFrame({"text": texts, "id": ids, "rank": ranks})
         df.to_csv(output_file_path, index=False)
+
 
 def get_text_dataset(dataset_name):
     data_files = {}
     data_files["train"] = dataset_name
     extension = dataset_name.split(".")[-1]
     if extension == "txt":
-            extension = "text"
+        extension = "text"
     raw_datasets = load_dataset(extension, data_files=data_files)
     return raw_datasets["train"]
 
-if __name__=="__main__":
 
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--index_name', default="example_bm25_source", type=str)
     parser.add_argument('--source_file', default="./example_data/source.csv", type=str)
@@ -147,7 +150,8 @@ if __name__=="__main__":
     parser.add_argument('--output_dir', default="./example_data/", type=str)
     parser.add_argument('--output_name', default="selected.csv", type=str)
     parser.add_argument('--top_k', default=50, type=int)
-    parser.add_argument('--rake', action="store_true", help="extract key phrases in the query to speed up searching process")
+    parser.add_argument('--rake', action="store_true",
+                        help="extract key phrases in the query to speed up searching process")
     args = parser.parse_args()
 
     source_dataset = get_text_dataset(args.source_file)
